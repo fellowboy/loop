@@ -1,36 +1,55 @@
 import requests
 import smtplib
+from bs4 import BeautifulSoup
 import time
-from datetime import datetime
 
-# email information
-email = 'tempname1@email.com'
-password = 'Finten33!'
-to_email = 'prodbyjod@gmail.com'
+# set the URL of the page to monitor
+url = 'https://www.looperman.com/loops'
 
-# function to send email notification
+# set the email addresses
+sender_email = 'baitofclick@gmail.com'
+sender_password = 'fuckoff6'
+receiver_email = 'prodbyjod@gmail.com'
+
+# initialize the previous state to None
+previous_state = None
+
+# function to check the loops page
+def check_loops():
+    global previous_state
+    # get the page HTML
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    # get the number of loops
+    num_loops = int(soup.find('span', {'id': 'navLoopsCount'}).text.replace(',', ''))
+    # get the loop table
+    loop_table = soup.find('table', {'class': 'table'})
+    # get the current state
+    current_state = (num_loops, hash(str(loop_table)))
+    # compare the current state to the previous state
+    if previous_state is not None and current_state != previous_state:
+        # send an email
+        send_email()
+    # update the previous state
+    previous_state = current_state
+
+# function to send an email notification
 def send_email():
-    subject = 'Looperman.com Loops Review Started'
-    body = 'The admins have started uploading loops for review on Looperman.com/loops'
-    message = f'Subject: {subject}\n\n{body}'
-
+    # set up the SMTP server
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
-    server.login(email, password)
-    server.sendmail(email, to_email, message)
+    # log in to the account
+    server.login(sender_email, sender_password)
+    # compose the email
+    subject = 'Looperman Loops Page Updated!'
+    body = 'The Looperman loops page has been updated.'
+    message = f'Subject: {subject}\n\n{body}'
+    # send the email
+    server.sendmail(sender_email, receiver_email, message)
+    # log out of the account
     server.quit()
 
-# loop to check site every 5 minutes between 8am-4pm BST
+# run the loop checker every 5 minutes
 while True:
-    now = datetime.now()
-    current_time = now.strftime('%H:%M:%S')
-    if current_time >= '08:00:00' and current_time <= '16:00:00':
-        try:
-            url = 'https://www.looperman.com/loops'
-            response = requests.get(url)
-            if response.status_code == 200 and 'Upload your loops' in response.text:
-                send_email()
-                break
-        except:
-            pass
+    check_loops()
     time.sleep(300)
